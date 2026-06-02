@@ -1,18 +1,29 @@
 import pygame
 
-# ініціалізація гри
+# ініціалізація гри та вікна
 pygame.init()
-screen = pygame.display.set_mode((900, 359)) # flags=pygame.NOFRAME
+screen = pygame.display.set_mode((618, 359), flags=pygame.NOFRAME) 
 pygame.display.set_caption("My Game")
 icon = pygame.image.load("imgs/logo.png")
 pygame.display.set_icon(icon)
-clock = pygame.time.Clock()
+inGame = True
+
+# музика
+pygame.mixer.init()
+pygame.mixer.music.load("sounds/lemonade.mp3")
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)  # -1 = безкінечний повтор
 
 # налаштування основи
-myfont = pygame.font.Font("fonts/pixel.ttf", 25)
+clock = pygame.time.Clock()
+
 bg = pygame.image.load("imgs/background.png")
 bgX = 0
-# player = pygame.image.load("imgs/hero/right-1.png")
+
+myfont = pygame.font.Font("fonts/pixel.ttf", 25)
+text = myfont.render("Зіфірка", False, (255, 255, 255))
+
+# анімація персонажа, координати, стан
 walkRight = [
     pygame.image.load("imgs/hero/right-2.png"), 
     pygame.image.load("imgs/hero/right-3.png"), 
@@ -25,57 +36,85 @@ walkLeft = [
     pygame.image.load("imgs/hero/left-4.png"), 
     pygame.image.load("imgs/hero/left-1.png"), 
 ]
-
-
-# обєкти для відображення
-text = myfont.render("Зіфірка", False, (255, 255, 255))
-square = pygame.Surface((100, 100))
-square.fill((255, 0, 0))
-
-
-run = True
 playerAnimCount = 3
-while run:
+walkDirection = walkRight
+
+playerX = 130
+playerY = 250
+
+playerSpeed = 5
+jumpHeight = 7
+
+isJump  = False
+isGo = True
+
+# запуск гри
+while inGame:
+    clock.tick(10)
 
     # відображення обєктів
     screen.blit(bg, (bgX, 0))
     screen.blit(bg, (bgX + 618, 0))
+    screen.blit(bg, (bgX - 618, 0))
+    if bgX == -618 or bgX == 1236:
+        bgX = 0
+
     screen.blit(text, (120, 10))
-    screen.blit(walkRight[playerAnimCount], (300, 250))
-    
-    if playerAnimCount == 3:
+
+    screen.blit(walkDirection[playerAnimCount], (playerX, playerY))
+
+    # анімація персонажа при русі та стрибку
+    if isGo and not isJump:
+        if playerAnimCount == 3:
+            playerAnimCount = 0
+        else:
+            playerAnimCount += 1
+    elif isGo and isJump:
         playerAnimCount = 0
     else:
-        playerAnimCount += 1
+        playerAnimCount = 3
 
-    bgX -= 3
-    if bgX == -900:
-        bgX = 618
+    # Клавіші для руху персонажа
+    key = pygame.key.get_pressed()
+    if key[pygame.K_a]:
+        bgX += 3
+        walkDirection = walkLeft
+        isGo = True
+    elif key[pygame.K_d]:
+        bgX -= 3
+        walkDirection = walkRight
+        isGo = True
+    else:
+        isGo = False
+        playerAnimCount = 3
 
-    
-    # screen.blit(square, (50, 50))
-    # pygame.draw.circle(screen, (0, 255, 0), (50, 100), 20)
-    # player = pygame.image.load("imgs/logo.png")
-    # screen.blit(player, (10, 10))
+    if key[pygame.K_a] and playerX > 80:
+        playerX -= playerSpeed
+    elif key[pygame.K_d] and playerX < 618 - 130:
+        playerX += playerSpeed  
+
+    if not isJump:
+        if key[pygame.K_w]:
+            isGo = False
+            isJump = True
+    else:
+        if jumpHeight >= -7:
+            if jumpHeight > 0:
+                playerY -= (jumpHeight ** 2) / 2
+            else:
+                playerY += (jumpHeight ** 2) / 2
+
+            jumpHeight -= 1
+        else:
+            isJump = False
+            isGo = True
+            jumpHeight = 7
 
     pygame.display.update()
 
-    # screen.fill(bg_color)
-    # вихід з гри по хрестику обгортки
+    # вихід з гри
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-            pygame.quit()
-
-        # elif event.type == pygame.KEYDOWN:
-        #     if event.key == pygame.K_w:
-        #         bg_color = (0, 255, 0)
-        #     elif event.key == pygame.K_s:
-        #         bg_color = (0, 0, 255)
-        #     elif event.key == pygame.K_a:
-        #         bg_color = (255, 0, 0)
-        #     elif event.key == pygame.K_d:
-        #         bg_color = (255, 255, 0)
-
-
-    clock.tick(10)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                inGame = False
+                pygame.quit()
